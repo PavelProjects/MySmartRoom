@@ -39,56 +39,53 @@ public class MainActivity extends AppCompatActivity {
 
     private static String TAG = "MAIN_MENU";
 
-    private ListView devicesListView;
-    private ArrayAdapter<Device> adapter;
+    private ListView devicesListView, savedDevicesListView;
+    private ArrayAdapter<Device> adapter, savedAdapter;
     private List<Device> devicesList = new ArrayList<>();
+    private List<Device> savedDevicesList = new ArrayList<>();
     private GifImageView pepe;
     private Context context;
     private Handler postToList;
     private EditText portEdit;
     private androidx.appcompat.widget.Toolbar toolbar;
     private String port = "3257";
+    private AdapterView.OnItemClickListener basicClickListener = new AdapterView.OnItemClickListener() {
+        @Override
+        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            String targetIp = ((Device) parent.getItemAtPosition(position)).getIp();
+            if(!targetIp.isEmpty()){
+                Intent intent = new Intent(context, ControlDeviceActivity.class);
+                intent.putExtra("targetIp", targetIp);
+                intent.putExtra("port", port);
+                startActivity(intent);
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         context = getApplicationContext();
-        devicesList.add(new Device("10.42.0.192", "poeblo"));
         setContentView(R.layout.activity_main);
         portEdit = (EditText) findViewById(R.id.port_edit);
+        savedDevicesListView = findViewById(R.id.saved_device_list);
         toolbar = findViewById(R.id.toolbar);
         pepe = findViewById(R.id.pepo);
         devicesListView = findViewById(R.id.device_list);
 
+        savedDevicesList.add(new Device("10.42.0.192", "poeblo"));
         setSupportActionBar(toolbar);
         getSupportActionBar().setTitle("Choose device");
 
         portEdit.setText(port);
-        adapter = new ArrayAdapter<Device>(this, android.R.layout.two_line_list_item, android.R.id.text1, devicesList){
-            @NonNull
-            @Override
-            public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-                View view = super.getView(position, convertView, parent);
-                final Device device = getItem(position);
-                ((TextView) view.findViewById(android.R.id.text1)).setText(device.getName());
-                ((TextView) view.findViewById(android.R.id.text2)).setText(device.getIp());
-                return view;
-            }
-        };
 
+        adapter = getAdapterForList(devicesList);
         devicesListView.setAdapter(adapter);
-        devicesListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String targetIp = devicesList.get(position).getIp();
-                if(!targetIp.isEmpty()){
-                    Intent intent = new Intent(context, ControlDeviceActivity.class);
-                    intent.putExtra("targetIp", targetIp);
-                    intent.putExtra("port", port);
-                    startActivity(intent);
-                }
-            }
-        });
+        devicesListView.setOnItemClickListener(basicClickListener);
+
+        savedAdapter = getAdapterForList(savedDevicesList);
+        savedDevicesListView.setAdapter(savedAdapter);
+        savedDevicesListView.setOnItemClickListener(basicClickListener);
 
         postToList = new Handler(){
             public void handleMessage(android.os.Message msg){
@@ -110,6 +107,20 @@ public class MainActivity extends AppCompatActivity {
                 update();
         }
         return true;
+    }
+
+    private ArrayAdapter<Device> getAdapterForList(List<Device> list){
+        return new ArrayAdapter<Device>(this, android.R.layout.two_line_list_item, android.R.id.text1, list){
+            @NonNull
+            @Override
+            public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+                View view = super.getView(position, convertView, parent);
+                final Device device = getItem(position);
+                ((TextView) view.findViewById(android.R.id.text1)).setText(device.getName());
+                ((TextView) view.findViewById(android.R.id.text2)).setText(device.getIp());
+                return view;
+            }
+        };
     }
 
     private void update(){

@@ -5,4 +5,6 @@
     <string name="right_servo_angle">Right servo angle</string>
     <string name="set">Set</string>
     <string name="auto_close">Auto close</string>
+    <string name="saved_devices">Saved devices</string>
+    <string name="devices_in_local_network">Devices in local network</string>
 </resources>
