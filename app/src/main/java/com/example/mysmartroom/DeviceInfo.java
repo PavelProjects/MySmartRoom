@@ -4,7 +4,7 @@ import androidx.annotation.NonNull;
 
 public class DeviceInfo {
     private String name;
-    private int lightValue; //не уверен, что пропарсится
+    private int lightValue;
     private int servoLeft;
     private int servoRight;
     private boolean autoTurn;

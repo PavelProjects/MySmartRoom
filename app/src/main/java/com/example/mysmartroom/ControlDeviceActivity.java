@@ -33,8 +33,8 @@ public class ControlDeviceActivity extends AppCompatActivity {
     private String port;
     private Api api;
     private Context context;
-    private TextView nameView, lightView, leftAngleView, rightAngleView, openView, closeView;
-    private EditText angleEdit;
+    private TextView lightView, leftAngleView, rightAngleView, openView, closeView;
+    private EditText angleEdit, deviceNameEdit;
     private Switch autoTurnSwitch;
 
     private Callback<DeviceInfo> basicResponse = new Callback<DeviceInfo>() {
@@ -43,7 +43,7 @@ public class ControlDeviceActivity extends AppCompatActivity {
             if (response.isSuccessful()) {
                 DeviceInfo device = response.body();
                 Log.d(TAG, device.toString());
-                nameView.setText(device.getName());
+                deviceNameEdit.setText(device.getName());
                 lightView.setText(String.valueOf(device.getLightValue()));
                 leftAngleView.setText(String.valueOf(device.getLeftAngle()));
                 rightAngleView.setText(String.valueOf(device.getRightAngle()));
@@ -67,6 +67,7 @@ public class ControlDeviceActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         context = getApplicationContext();
         setContentView(R.layout.control_device);
+
         deviceIp = getIntent().getStringExtra("targetIp");
         port = getIntent().getStringExtra("port");
         Log.d(TAG, "Device ip : " + deviceIp);
@@ -75,7 +76,7 @@ public class ControlDeviceActivity extends AppCompatActivity {
         }
         api = ApiCreator.getApi("http://" + deviceIp + ":" + port + "/");
 
-        nameView = ((TextView) findViewById(R.id.device_name));
+        deviceNameEdit = ((EditText) findViewById(R.id.device_name));
         lightView = (TextView) findViewById(R.id.light_value);
         leftAngleView = (TextView) findViewById(R.id.left_servo);
         rightAngleView = (TextView) findViewById(R.id.right_servo);
@@ -87,7 +88,7 @@ public class ControlDeviceActivity extends AppCompatActivity {
         autoTurnSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                saveSettings("", "", "", isChecked ? "on" : "off");
+                saveSettings("", "", "", isChecked ? "on" : "off", "");
             }
         });
     }
@@ -98,8 +99,8 @@ public class ControlDeviceActivity extends AppCompatActivity {
         updateDeviceInfo();
     }
 
-    private void saveSettings (String openValue, String closeValue, String angleSet, String autoSet){
-        api.saveSettings(openValue, closeValue, angleSet, autoSet).enqueue(basicResponse);
+    private void saveSettings (String openValue, String closeValue, String angleSet, String autoSet, String deviceName){
+        api.saveSettings(openValue, closeValue, angleSet, autoSet, deviceName).enqueue(basicResponse);
     }
 
     private void updateDeviceInfo() {
@@ -149,8 +150,9 @@ public class ControlDeviceActivity extends AppCompatActivity {
     public void saveButton(View view) {
         String valueOpen = ((EditText) findViewById(R.id.open_value)).getText().toString();
         String valueClose = ((EditText) findViewById(R.id.close_value)).getText().toString();
-        if (!valueOpen.isEmpty() && !valueClose.isEmpty()) {
-            saveSettings(valueOpen, valueClose, "", "");
+        String deviceName = deviceNameEdit.getText().toString();
+        if (!valueOpen.isEmpty() && !valueClose.isEmpty() && !deviceName.isEmpty()) {
+            saveSettings(valueOpen, valueClose, "", "", deviceName);
         }else{
             Toast.makeText(context, "Parameter can't be empty!", Toast.LENGTH_SHORT).show();
         }
@@ -159,7 +161,7 @@ public class ControlDeviceActivity extends AppCompatActivity {
     public void setAngle(View view){
         String angle = angleEdit.getText().toString();
         if (!angle.isEmpty()) {
-            saveSettings("", "", angle, "");
+            saveSettings("", "", angle, "", "");
         }else{
             Toast.makeText(context, "Parameter can't be empty!", Toast.LENGTH_SHORT).show();
         }

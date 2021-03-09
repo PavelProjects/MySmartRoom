@@ -1,5 +1,7 @@
 package com.example.mysmartroom;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -14,12 +16,16 @@ import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.service.autofill.DateValueSanitizer;
 import android.text.format.Formatter;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
@@ -44,35 +50,51 @@ public class MainActivity extends AppCompatActivity {
     private static String TAG = "MAIN_MENU";
 
     private ListView devicesListView;
-    private ArrayAdapter<String> adapter;
-    private List<String> devicesList = new ArrayList<>();
+    private ArrayAdapter<Device> adapter;
+    private List<Device> devicesList = new ArrayList<>();
     private GifImageView pepe;
     private Context context;
     private Handler postToList;
-    private int port = 3257;
+    private EditText portEdit;
+    private String port = "3257";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         context = getApplicationContext();
-        devicesList.add("10.42.0.192");
+        devicesList.add(new Device("10.42.0.192", "poeblo"));
         setContentView(R.layout.activity_main);
+        portEdit = (EditText) findViewById(R.id.port_edit);
         pepe = findViewById(R.id.pepo);
         devicesListView = findViewById(R.id.device_list);
-        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, devicesList);
+
+        portEdit.setText(port);
+        adapter = new ArrayAdapter<Device>(this, android.R.layout.two_line_list_item, android.R.id.text1, devicesList){
+            @NonNull
+            @Override
+            public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+                View view = super.getView(position, convertView, parent);
+                final Device device = getItem(position);
+                ((TextView) view.findViewById(android.R.id.text1)).setText(device.getName());
+                ((TextView) view.findViewById(android.R.id.text2)).setText(device.getIp());
+                return view;
+            }
+        };
+
         devicesListView.setAdapter(adapter);
         devicesListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String targetIp = devicesList.get(position);
+                String targetIp = devicesList.get(position).getIp();
                 if(!targetIp.isEmpty()){
                     Intent intent = new Intent(context, ControlDeviceActivity.class);
                     intent.putExtra("targetIp", targetIp);
-                    intent.putExtra("port", String.valueOf(port));
+                    intent.putExtra("port", port);
                     startActivity(intent);
                 }
             }
         });
+
         postToList = new Handler(){
             public void handleMessage(android.os.Message msg){
                 adapter.notifyDataSetChanged();
@@ -101,15 +123,15 @@ public class MainActivity extends AppCompatActivity {
                     String subnet = getSubnetAddress(mWifiManager.getDhcpInfo().gateway);
                     Log.d(TAG, "Subnet : " + subnet);
                     final int timeout = 500;
-                    final List<Future<String>> futures = new ArrayList<>();
+                    final List<Future<Device>> futures = new ArrayList<>();
                     for (int i = 1; i <= 193; i++) {
 //                        Log.d(TAG, subnet + i);
-                        futures.add(portIsOpen(es, subnet + i, port, timeout));
+                        futures.add(portIsOpen(es, subnet + i, Integer.parseInt(port), timeout));
                     }
                     es.shutdown();
-                    for (final Future<String> f : futures) {
+                    for (final Future<Device> f : futures) {
                         if(f.get() != null){
-                            Log.d(TAG, f.get());
+                            Log.d(TAG, f.get().getName());
                             devicesList.add(f.get());
                         }
                     }
@@ -124,14 +146,15 @@ public class MainActivity extends AppCompatActivity {
         updateThread.start();
     }
 
-    public static Future<String> portIsOpen(final ExecutorService es, final String ip, final int port, final int timeout) {
-        return es.submit(new Callable<String>() {
-            @Override public String call() {
+    public static Future<Device> portIsOpen(final ExecutorService es, final String ip, final int port, final int timeout) {
+        return es.submit(new Callable<Device>() {
+            @Override public Device call() {
                 Socket socket = new Socket();
                 try {
-                    socket.connect(new InetSocketAddress(ip, port), timeout); //todo надо как-то прокидывать имя устройства
+                    socket.connect(new InetSocketAddress(ip, port), timeout);
+                    String name = socket.getInetAddress().getHostName();
                     socket.close();
-                    return ip;
+                    return new Device(ip, name);
                 } catch (Exception ex) {
                     return null;
                 }
@@ -146,5 +169,30 @@ public class MainActivity extends AppCompatActivity {
                 (address >> 16 & 0xff));
 
         return ipString;
+    }
+}
+
+class Device{
+    private String ip;
+    private String name;
+    public Device(String ip, String name){
+        this.ip = ip;
+        this.name = name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getIp() {
+        return ip;
+    }
+
+    public void setIp(String ip) {
+        this.ip = ip;
     }
 }

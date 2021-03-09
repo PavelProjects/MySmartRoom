@@ -15,7 +15,7 @@ public interface Api {
     Call<DeviceInfo> getDeviceInfo();
 
     @GET("/json")
-    Call<DeviceInfo> saveSettings(@Query("open_set") String openValue, @Query("close_set") String closeValue, @Query("angle_set") String angleValue, @Query("auto_set") String auto);
+    Call<DeviceInfo> saveSettings(@Query("open_set") String openValue, @Query("close_set") String closeValue, @Query("angle_set") String angleValue, @Query("auto_set") String auto, @Query("device_name_set") String deviceName);
 
     @GET("/json/open")
     Call<DeviceInfo> open(@Query("servo") String servo);
