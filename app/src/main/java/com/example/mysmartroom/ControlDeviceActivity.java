@@ -2,13 +2,12 @@ package com.example.mysmartroom;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.EditText;
-import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -16,11 +15,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.google.android.material.slider.Slider;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -35,6 +29,7 @@ public class ControlDeviceActivity extends AppCompatActivity {
     private Context context;
     private TextView lightView, leftAngleView, rightAngleView, openView, closeView;
     private EditText angleEdit, deviceNameEdit;
+    private androidx.appcompat.widget.Toolbar toolbar;
     private Switch autoTurnSwitch;
 
     private Callback<DeviceInfo> basicResponse = new Callback<DeviceInfo>() {
@@ -50,6 +45,7 @@ public class ControlDeviceActivity extends AppCompatActivity {
                 openView.setText(String.valueOf(device.getOpenValue()));
                 closeView.setText(String.valueOf(device.getCloseValue()));
                 autoTurnSwitch.setChecked(device.isAutoTurn());
+                getSupportActionBar().setTitle("Connected to " + device.getName());
             } else {
                 Toast.makeText(context, "Fail", Toast.LENGTH_SHORT).show();
             }
@@ -84,6 +80,9 @@ public class ControlDeviceActivity extends AppCompatActivity {
         closeView = (TextView) findViewById(R.id.close_value);
         autoTurnSwitch = (Switch) findViewById(R.id.auto_turn);
         angleEdit = (EditText) findViewById(R.id.open_value);
+        toolbar = findViewById(R.id.toolbar);
+
+        setSupportActionBar(toolbar);
 
         autoTurnSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -96,14 +95,29 @@ public class ControlDeviceActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        updateDeviceInfo();
+        update();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.basic_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        switch (item.getItemId()){
+            case R.id.action_update:
+                update();
+        }
+        return true;
     }
 
     private void saveSettings (String openValue, String closeValue, String angleSet, String autoSet, String deviceName){
         api.saveSettings(openValue, closeValue, angleSet, autoSet, deviceName).enqueue(basicResponse);
     }
 
-    private void updateDeviceInfo() {
+    private void update() {
         api.getDeviceInfo().enqueue(basicResponse);
     }
 
@@ -117,10 +131,6 @@ public class ControlDeviceActivity extends AppCompatActivity {
 
     private void close(String servo) {
         api.close(servo).enqueue(basicResponse);
-    }
-
-    public void update(View view) {
-        updateDeviceInfo();
     }
 
     public void openServo(View view) {

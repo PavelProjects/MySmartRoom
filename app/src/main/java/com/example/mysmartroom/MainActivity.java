@@ -5,20 +5,15 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.net.ConnectivityManager;
-import android.net.DhcpInfo;
-import android.net.NetworkInfo;
-import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.service.autofill.DateValueSanitizer;
-import android.text.format.Formatter;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -28,13 +23,8 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -56,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
     private Context context;
     private Handler postToList;
     private EditText portEdit;
+    private androidx.appcompat.widget.Toolbar toolbar;
     private String port = "3257";
 
     @Override
@@ -65,8 +56,12 @@ public class MainActivity extends AppCompatActivity {
         devicesList.add(new Device("10.42.0.192", "poeblo"));
         setContentView(R.layout.activity_main);
         portEdit = (EditText) findViewById(R.id.port_edit);
+        toolbar = findViewById(R.id.toolbar);
         pepe = findViewById(R.id.pepo);
         devicesListView = findViewById(R.id.device_list);
+
+        setSupportActionBar(toolbar);
+        getSupportActionBar().setTitle("Choose device");
 
         portEdit.setText(port);
         adapter = new ArrayAdapter<Device>(this, android.R.layout.two_line_list_item, android.R.id.text1, devicesList){
@@ -102,12 +97,19 @@ public class MainActivity extends AppCompatActivity {
         };
     }
 
-    public void updateDevices(View view) {
-        try {
-            update();
-        } catch (Exception e) {
-            Log.e(TAG, e.getLocalizedMessage());
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.basic_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        switch (item.getItemId()){
+            case R.id.action_update:
+                update();
         }
+        return true;
     }
 
     private void update(){

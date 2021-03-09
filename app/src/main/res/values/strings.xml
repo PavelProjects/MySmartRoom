@@ -4,4 +4,5 @@
     <string name="left_servo_angle">Left servo angle</string>
     <string name="right_servo_angle">Right servo angle</string>
     <string name="set">Set</string>
+    <string name="auto_close">Auto close</string>
 </resources>
