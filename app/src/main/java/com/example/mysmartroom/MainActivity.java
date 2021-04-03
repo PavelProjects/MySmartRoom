@@ -7,10 +7,12 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -22,6 +24,7 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.Toolbar;
 
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -43,21 +46,24 @@ public class MainActivity extends AppCompatActivity {
     private ArrayAdapter<Device> adapter, savedAdapter;
     private List<Device> devicesList = new ArrayList<>();
     private List<Device> savedDevicesList = new ArrayList<>();
+    private List<String> savedIps = new ArrayList<>();
     private GifImageView pepe;
     private Context context;
-    private Handler postToList;
+    private Handler updateSearchListHandler, updateSavedHandler;
     private EditText portEdit;
     private androidx.appcompat.widget.Toolbar toolbar;
     private String port = "3257";
     private AdapterView.OnItemClickListener basicClickListener = new AdapterView.OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-            String targetIp = ((Device) parent.getItemAtPosition(position)).getIp();
-            if(!targetIp.isEmpty()){
+            Device device = ((Device) parent.getItemAtPosition(position));
+            if(device.isAvailable()){
                 Intent intent = new Intent(context, ControlDeviceActivity.class);
-                intent.putExtra("targetIp", targetIp);
+                intent.putExtra("targetIp", device.getIp());
                 intent.putExtra("port", port);
                 startActivity(intent);
+            }else{
+                Toast.makeText(context, "This device is not available!", Toast.LENGTH_SHORT).show();
             }
         }
     };
@@ -73,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
         pepe = findViewById(R.id.pepo);
         devicesListView = findViewById(R.id.device_list);
 
-        savedDevicesList.add(new Device("10.42.0.192", "poeblo"));
+        savedIps.add("10.42.0.192");
         setSupportActionBar(toolbar);
         getSupportActionBar().setTitle("Choose device");
 
@@ -87,9 +93,15 @@ public class MainActivity extends AppCompatActivity {
         savedDevicesListView.setAdapter(savedAdapter);
         savedDevicesListView.setOnItemClickListener(basicClickListener);
 
-        postToList = new Handler(){
+        updateSearchListHandler = new Handler(){
             public void handleMessage(android.os.Message msg){
                 adapter.notifyDataSetChanged();
+            }
+        };
+
+        updateSavedHandler = new Handler(){
+            public void handleMessage(Message message){
+                savedAdapter.notifyDataSetChanged();
             }
         };
     }
@@ -104,9 +116,16 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         switch (item.getItemId()){
             case R.id.action_update:
+                updateSavedDevices();
                 update();
         }
         return true;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateSavedDevices();
     }
 
     private ArrayAdapter<Device> getAdapterForList(List<Device> list){
@@ -118,9 +137,35 @@ public class MainActivity extends AppCompatActivity {
                 final Device device = getItem(position);
                 ((TextView) view.findViewById(android.R.id.text1)).setText(device.getName());
                 ((TextView) view.findViewById(android.R.id.text2)).setText(device.getIp());
+                view.setBackgroundColor(device.isAvailable() ? Color.GREEN : Color.RED);
                 return view;
             }
         };
+    }
+
+    private void updateSavedDevices(){
+        savedDevicesList.clear();
+        Thread updateThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                savedIps.forEach(ip -> {
+                    Socket socket = new Socket();
+                    Device device = new Device(ip, ip, false);
+                    try {
+                        socket.connect(new InetSocketAddress(ip, Integer.parseInt(port)), 250);
+                        device.setName(socket.getInetAddress().getHostName());
+                        device.setAvailable(true);
+                        socket.close();
+                    } catch (Exception ex) {
+                        Log.e(TAG, ex.getLocalizedMessage());
+                    }finally {
+                        savedDevicesList.add(device);
+                        updateSavedHandler.sendEmptyMessage(0);
+                    }
+                });
+            }
+        });
+        updateThread.start();
     }
 
     private void update(){
@@ -148,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
                             devicesList.add(f.get());
                         }
                     }
-                    postToList.sendEmptyMessage(0);
+                    updateSearchListHandler.sendEmptyMessage(0);
                 } catch (Exception e) {
                     Log.e(TAG, e.getLocalizedMessage());
                 } finally {
@@ -167,7 +212,7 @@ public class MainActivity extends AppCompatActivity {
                     socket.connect(new InetSocketAddress(ip, port), timeout);
                     String name = socket.getInetAddress().getHostName();
                     socket.close();
-                    return new Device(ip, name);
+                    return new Device(ip, name, true);
                 } catch (Exception ex) {
                     return null;
                 }
@@ -188,9 +233,12 @@ public class MainActivity extends AppCompatActivity {
 class Device{
     private String ip;
     private String name;
-    public Device(String ip, String name){
+    private boolean available;
+
+    public Device(String ip, String name, boolean available){
         this.ip = ip;
         this.name = name;
+        this.available = available;
     }
 
     public void setName(String name) {
@@ -207,5 +255,13 @@ class Device{
 
     public void setIp(String ip) {
         this.ip = ip;
+    }
+
+    public boolean isAvailable() {
+        return available;
+    }
+
+    public void setAvailable(boolean available) {
+        this.available = available;
     }
 }

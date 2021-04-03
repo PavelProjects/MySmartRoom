@@ -101,7 +101,54 @@
                             android:inputType="number" />
 
                     </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="2"
+                        android:orientation="horizontal"
+                        android:layout_gravity="center"
+                        android:padding="10dip">
 
+                        <TextView
+                            android:id="@+id/ntname"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:text="Network name" />
+
+                        <EditText
+                            android:id="@+id/network_name"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ems="20"
+                            android:gravity="center"
+                            android:inputType="text" />
+
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="2"
+                        android:orientation="horizontal"
+                        android:layout_gravity="center"
+                        android:padding="10dip">
+
+                        <TextView
+                            android:id="@+id/ntpass"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:text="Network password" />
+
+                        <EditText
+                            android:id="@+id/network_password"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ems="20"
+                            android:gravity="center"
+                            android:inputType="text" />
+
+                    </LinearLayout>
                     <Button
                         android:id="@+id/button"
                         android:layout_width="match_parent"
@@ -353,6 +400,14 @@
                         android:text="close" />
                 </LinearLayout>
             </LinearLayout>
+
+            <Button
+                android:id="@+id/button2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:onClick="restartDevice"
+                android:backgroundTint="@android:color/holo_red_dark"
+                android:text="RESTART" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>
