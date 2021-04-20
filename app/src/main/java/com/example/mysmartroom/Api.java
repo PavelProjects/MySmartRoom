@@ -23,6 +23,9 @@ public interface Api {
     @GET("/json/open")
     Call<DeviceInfo> open(@Query("servo") String servo);
 
+    @GET("/json/fullopen")
+    Call<DeviceInfo> openFull(@Query("servo") String servo);
+
     @GET("/json/close")
     Call<DeviceInfo> close(@Query("servo") String servo);
 

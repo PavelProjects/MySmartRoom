@@ -138,6 +138,10 @@ public class ControlDeviceActivity extends AppCompatActivity {
         api.open(servo).enqueue(basicResponse);
     }
 
+    private void openFull(String servo) {
+        api.openFull(servo).enqueue(basicResponse);
+    }
+
     private void middle(String servo) {
         api.middle(servo).enqueue(basicResponse);
     }
@@ -181,6 +185,8 @@ public class ControlDeviceActivity extends AppCompatActivity {
     public void middleLeftServo(View view) {
         middle("left");
     }
+
+    public void openFullServo(View view){openFull("");}
 
     public void restartDevice(View view){
         api.restart().enqueue(new Callback<Void>() {

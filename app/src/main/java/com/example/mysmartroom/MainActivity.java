@@ -24,10 +24,20 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.Toolbar;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -41,12 +51,12 @@ import pl.droidsonroids.gif.GifImageView;
 public class MainActivity extends AppCompatActivity {
 
     private static String TAG = "MAIN_MENU";
+    private static String SAVED_DEVICES_FILE_NAME = "devices";
 
     private ListView devicesListView, savedDevicesListView;
     private ArrayAdapter<Device> adapter, savedAdapter;
     private List<Device> devicesList = new ArrayList<>();
     private List<Device> savedDevicesList = new ArrayList<>();
-    private List<String> savedIps = new ArrayList<>();
     private GifImageView pepe;
     private Context context;
     private Handler updateSearchListHandler, updateSavedHandler;
@@ -57,29 +67,31 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
             Device device = ((Device) parent.getItemAtPosition(position));
-            if(device.isAvailable()){
+            if (device.isAvailable()) {
                 Intent intent = new Intent(context, ControlDeviceActivity.class);
                 intent.putExtra("targetIp", device.getIp());
                 intent.putExtra("port", port);
                 startActivity(intent);
-            }else{
+            } else {
                 Toast.makeText(context, "This device is not available!", Toast.LENGTH_SHORT).show();
             }
         }
     };
+    private Gson gson;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         context = getApplicationContext();
+        GsonBuilder builder = new GsonBuilder();
+        gson = builder.create();
         setContentView(R.layout.activity_main);
-        portEdit = (EditText) findViewById(R.id.port_edit);
+        devicesListView = findViewById(R.id.device_list);
         savedDevicesListView = findViewById(R.id.saved_device_list);
+        portEdit = (EditText) findViewById(R.id.port_edit);
         toolbar = findViewById(R.id.toolbar);
         pepe = findViewById(R.id.pepo);
-        devicesListView = findViewById(R.id.device_list);
 
-        savedIps.add("10.42.0.192");
         setSupportActionBar(toolbar);
         getSupportActionBar().setTitle("Choose device");
 
@@ -88,20 +100,52 @@ public class MainActivity extends AppCompatActivity {
         adapter = getAdapterForList(devicesList);
         devicesListView.setAdapter(adapter);
         devicesListView.setOnItemClickListener(basicClickListener);
+        devicesListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                try {
+                    if(!alreadySaved(devicesList.get(position))){
+                        savedDevicesList.add(devicesList.get(position));
+                        savedAdapter.notifyDataSetChanged();
+                        saveDevicesToDisk(savedDevicesList, SAVED_DEVICES_FILE_NAME);
+                        Toast.makeText(context, "saved", Toast.LENGTH_SHORT).show();
+                    }else{
+                        Toast.makeText(context, "already saved", Toast.LENGTH_SHORT).show();
+                    }
+                } catch (Exception e) {
+                    Toast.makeText(context, "Error occurred while saving device", Toast.LENGTH_SHORT).show();
+                }
+                return true;
+            }
+        });
 
         savedAdapter = getAdapterForList(savedDevicesList);
         savedDevicesListView.setAdapter(savedAdapter);
         savedDevicesListView.setOnItemClickListener(basicClickListener);
+        savedDevicesListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                try {
+                    savedDevicesList.remove(savedDevicesList.get(position));
+                    savedAdapter.notifyDataSetChanged();
+                    saveDevicesToDisk(savedDevicesList, SAVED_DEVICES_FILE_NAME);
+                } catch (Exception e) {
+                    Toast.makeText(context, "Error occurred while removing device", Toast.LENGTH_SHORT).show();
+                }
+                return true;
+            }
+        });
 
-        updateSearchListHandler = new Handler(){
-            public void handleMessage(android.os.Message msg){
+        updateSearchListHandler = new Handler() {
+            public void handleMessage(android.os.Message msg) {
                 adapter.notifyDataSetChanged();
             }
         };
 
-        updateSavedHandler = new Handler(){
-            public void handleMessage(Message message){
+        updateSavedHandler = new Handler() {
+            public void handleMessage(Message message) {
                 savedAdapter.notifyDataSetChanged();
+                Log.d(TAG, gson.toJson(savedDevicesList));
             }
         };
     }
@@ -114,10 +158,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        switch (item.getItemId()){
+        switch (item.getItemId()) {
             case R.id.action_update:
                 updateSavedDevices();
-                update();
+                searchDevices();
         }
         return true;
     }
@@ -128,8 +172,49 @@ public class MainActivity extends AppCompatActivity {
         updateSavedDevices();
     }
 
-    private ArrayAdapter<Device> getAdapterForList(List<Device> list){
-        return new ArrayAdapter<Device>(this, android.R.layout.two_line_list_item, android.R.id.text1, list){
+    private boolean alreadySaved(Device device){
+        for (Device dev : savedDevicesList) {
+            if(dev.getIp().equals(device.getIp()))
+                return true;
+        }
+        return false;
+    }
+
+    private List<Device> loadSavedDevicesFromDisk(String fileName) throws Exception {
+        if (createFileIfNeedTo(fileName))
+            return List.of();
+
+        FileInputStream fis = context.openFileInput(fileName);
+        InputStreamReader inputStreamReader = new InputStreamReader(fis, StandardCharsets.UTF_8);
+        StringBuilder stringBuilder = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(inputStreamReader)) {
+            String line = reader.readLine();
+            while (line != null) {
+                stringBuilder.append(line).append("\n");
+                line = reader.readLine();
+            }
+        } catch (IOException e) {
+            throw e;
+        }
+        Log.d(TAG, "Saved devices:\n" + stringBuilder.toString());
+        return gson.fromJson(stringBuilder.toString(), new TypeToken<ArrayList<Device>>() {
+        }.getType());
+    }
+
+    private void saveDevicesToDisk(List<Device> devices, String fileName) throws Exception {
+        createFileIfNeedTo(fileName);
+        try (FileOutputStream fos = context.openFileOutput(fileName, Context.MODE_PRIVATE)) {
+            fos.write(gson.toJson(devices).getBytes());
+        }
+    }
+
+    private boolean createFileIfNeedTo(String fileName) throws Exception {
+        File file = new File(context.getFilesDir(), fileName);
+        return file.createNewFile();
+    }
+
+    private ArrayAdapter<Device> getAdapterForList(List<Device> list) {
+        return new ArrayAdapter<Device>(this, android.R.layout.two_line_list_item, android.R.id.text1, list) {
             @NonNull
             @Override
             public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
@@ -143,23 +228,31 @@ public class MainActivity extends AppCompatActivity {
         };
     }
 
-    private void updateSavedDevices(){
+    private void updateSavedDevices() {
         savedDevicesList.clear();
         Thread updateThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                savedIps.forEach(ip -> {
+                try {
+                    savedDevicesList.addAll(loadSavedDevicesFromDisk(SAVED_DEVICES_FILE_NAME));
+                } catch (Exception e) {
+                    Log.e(TAG, e.getLocalizedMessage());
+                    Toast.makeText(context, "Error occurred loadind saved devices", Toast.LENGTH_SHORT).show();
+                }
+                if (savedDevicesList == null || savedDevicesList.isEmpty())
+                    return;
+
+                savedDevicesList.forEach(dev -> {
                     Socket socket = new Socket();
-                    Device device = new Device(ip, ip, false);
                     try {
-                        socket.connect(new InetSocketAddress(ip, Integer.parseInt(port)), 250);
-                        device.setName(socket.getInetAddress().getHostName());
-                        device.setAvailable(true);
+                        socket.connect(new InetSocketAddress(dev.getIp(), Integer.parseInt(port)), 250);
+                        dev.setName(socket.getInetAddress().getHostName());
+                        dev.setAvailable(true);
                         socket.close();
                     } catch (Exception ex) {
+                        dev.setAvailable(false);
                         Log.e(TAG, ex.getLocalizedMessage());
-                    }finally {
-                        savedDevicesList.add(device);
+                    } finally {
                         updateSavedHandler.sendEmptyMessage(0);
                     }
                 });
@@ -168,8 +261,8 @@ public class MainActivity extends AppCompatActivity {
         updateThread.start();
     }
 
-    private void update(){
-        Toast.makeText(this, "Updating", Toast.LENGTH_SHORT).show();
+    private void searchDevices() {
+        Toast.makeText(this, "Searching...", Toast.LENGTH_SHORT).show();
         devicesList.clear();
         pepe.setVisibility(View.VISIBLE);
         Thread updateThread = new Thread(new Runnable() {
@@ -188,7 +281,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     es.shutdown();
                     for (final Future<Device> f : futures) {
-                        if(f.get() != null){
+                        if (f.get() != null) {
                             Log.d(TAG, f.get().getName());
                             devicesList.add(f.get());
                         }
@@ -206,7 +299,8 @@ public class MainActivity extends AppCompatActivity {
 
     public static Future<Device> portIsOpen(final ExecutorService es, final String ip, final int port, final int timeout) {
         return es.submit(new Callable<Device>() {
-            @Override public Device call() {
+            @Override
+            public Device call() {
                 Socket socket = new Socket();
                 try {
                     socket.connect(new InetSocketAddress(ip, port), timeout);
@@ -219,7 +313,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-    private String getSubnetAddress(int address){
+
+    private String getSubnetAddress(int address) {
         String ipString = String.format(
                 "%d.%d.%d.",
                 (address & 0xff),
@@ -230,12 +325,12 @@ public class MainActivity extends AppCompatActivity {
     }
 }
 
-class Device{
+class Device {
     private String ip;
     private String name;
     private boolean available;
 
-    public Device(String ip, String name, boolean available){
+    public Device(String ip, String name, boolean available) {
         this.ip = ip;
         this.name = name;
         this.available = available;
