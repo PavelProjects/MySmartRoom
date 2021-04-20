@@ -10,13 +10,19 @@ public class DeviceInfo {
     private boolean autoTurn;
     private int closeValue;
     private int openValue;
+    private String networkName;
+    private String networkPassword;
 
     public String getName() {
-        return name;
+        return name.length() > 4 ? name.substring(3) : name;
     }
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getType(){
+        return name.substring(0, name.indexOf("}") + 1);
     }
 
     public boolean isAutoTurn() {
@@ -65,6 +71,22 @@ public class DeviceInfo {
 
     public void setServoRight(int servoRight) {
         this.servoRight = servoRight;
+    }
+
+    public String getNetworkName() {
+        return networkName;
+    }
+
+    public String getNetworkPassword() {
+        return networkPassword;
+    }
+
+    public void setNetworkName(String networkName) {
+        this.networkName = networkName;
+    }
+
+    public void setNetworkPassword(String networkPassword) {
+        this.networkPassword = networkPassword;
     }
 
     @NonNull
