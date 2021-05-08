@@ -275,7 +275,7 @@ public class MainActivity extends AppCompatActivity {
                     Log.d(TAG, "Subnet : " + subnet);
                     final int timeout = 500;
                     final List<Future<Device>> futures = new ArrayList<>();
-                    for (int i = 1; i <= 193; i++) {
+                    for (int i = 1; i <= 500; i++) {
 //                        Log.d(TAG, subnet + i);
                         futures.add(portIsOpen(es, subnet + i, Integer.parseInt(port), timeout));
                     }

@@ -6,7 +6,6 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -16,6 +15,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.mysmartroom.objects.DeviceAction;
+import com.example.mysmartroom.objects.DeviceInfo;
+
+import java.util.Arrays;
 import java.util.HashMap;
 
 import retrofit2.Call;
@@ -29,8 +32,8 @@ public class ControlDeviceActivity extends AppCompatActivity {
     private String port;
     private Api api;
     private Context context;
-    private TextView lightView, leftAngleView, rightAngleView, openView, closeView;
-    private EditText angleEdit, deviceNameEdit, networkNameEdit, networkPasswordEdit;
+    private TextView lightView, leftAngleView, rightAngleView;
+    private EditText deviceNameEdit, networkNameEdit, networkPasswordEdit, openEdit, closeEdit, brightEdit;
     private androidx.appcompat.widget.Toolbar toolbar;
     private Switch autoTurnSwitch;
 
@@ -49,8 +52,9 @@ public class ControlDeviceActivity extends AppCompatActivity {
                 lightView.setText(String.valueOf(device.getLightValue()));
                 leftAngleView.setText(String.valueOf(device.getLeftAngle()));
                 rightAngleView.setText(String.valueOf(device.getRightAngle()));
-                openView.setText(String.valueOf(device.getOpenValue()));
-                closeView.setText(String.valueOf(device.getCloseValue()));
+                openEdit.setText(String.valueOf(device.getOpenValue()));
+                closeEdit.setText(String.valueOf(device.getCloseValue()));
+                brightEdit.setText(String.valueOf(device.getBrightValue()));
                 autoTurnSwitch.setChecked(device.isAutoTurn());
                 networkNameEdit.setText(device.getNetworkName());
                 networkPasswordEdit.setText(device.getNetworkPassword());
@@ -86,10 +90,10 @@ public class ControlDeviceActivity extends AppCompatActivity {
         lightView = (TextView) findViewById(R.id.light_value);
         leftAngleView = (TextView) findViewById(R.id.left_servo);
         rightAngleView = (TextView) findViewById(R.id.right_servo);
-        openView = (TextView) findViewById(R.id.open_value);
-        closeView = (TextView) findViewById(R.id.close_value);
+        openEdit = findViewById(R.id.open_value);
+        closeEdit = findViewById(R.id.close_value);
+        brightEdit = findViewById(R.id.bright_value);
         autoTurnSwitch = (Switch) findViewById(R.id.auto_turn);
-        angleEdit = (EditText) findViewById(R.id.open_value);
         networkNameEdit = (EditText) findViewById(R.id.network_name);
         networkPasswordEdit = (EditText) findViewById(R.id.network_password);
         toolbar = findViewById(R.id.toolbar);
@@ -97,7 +101,7 @@ public class ControlDeviceActivity extends AppCompatActivity {
         autoTurnSwitch.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                saveSettings("", "", "-1", autoTurnSwitch.isChecked() ? "on" : "off", "", "", "");
+                api.sendActions(Arrays.asList(new DeviceAction(DeviceAction.ACTION_AUTO_TURN, "", autoTurnSwitch.isChecked() ? "on" : "off"))).enqueue(basicResponse);
             }
         });
 
@@ -125,68 +129,49 @@ public class ControlDeviceActivity extends AppCompatActivity {
         return true;
     }
 
-    private void saveSettings (String openValue, String closeValue, String angleSet, String autoSet,
-                               String deviceName, String networkName, String networkPassword){
-        api.saveSettings(openValue, closeValue, angleSet, autoSet, deviceName, networkName, networkPassword).enqueue(basicResponse);
-    }
-
     private void update() {
         api.getDeviceInfo().enqueue(basicResponse);
     }
 
-    private void open(String servo) {
-        api.open(servo).enqueue(basicResponse);
-    }
-
-    private void openFull(String servo) {
-        api.openFull(servo).enqueue(basicResponse);
-    }
-
-    private void middle(String servo) {
-        api.middle(servo).enqueue(basicResponse);
-    }
-
-    private void close(String servo) {
-        api.close(servo).enqueue(basicResponse);
-    }
-
     public void openServo(View view) {
-        open("");
+        api.sendActions(Arrays.asList(new DeviceAction(DeviceAction.ACTION_OPEN, "","3"))).enqueue(basicResponse);
     }
 
     public void closeServo(View view) {
-        close("");
+        api.sendActions(Arrays.asList(new DeviceAction(DeviceAction.ACTION_CLOSE, "","3"))).enqueue(basicResponse);
     }
 
     public void middleServo(View view) {
-        middle("");
+        api.sendActions(Arrays.asList(new DeviceAction(DeviceAction.ACTION_MIDDLE, "","3"))).enqueue(basicResponse);
     }
 
     public void openRightServo(View view) {
-        open("right");
+        api.sendActions(Arrays.asList(new DeviceAction(DeviceAction.ACTION_OPEN, "","2"))).enqueue(basicResponse);
     }
 
     public void closeRightServo(View view) {
-        close("right");
+        api.sendActions(Arrays.asList(new DeviceAction(DeviceAction.ACTION_CLOSE, "","2"))).enqueue(basicResponse);
     }
 
     public void middleRightServo(View view) {
-        middle("right");
+        api.sendActions(Arrays.asList(new DeviceAction(DeviceAction.ACTION_MIDDLE, "","2"))).enqueue(basicResponse);
     }
 
     public void openLeftServo(View view) {
-        open("left");
+        api.sendActions(Arrays.asList(new DeviceAction(DeviceAction.ACTION_OPEN, "","1"))).enqueue(basicResponse);
     }
 
     public void closeLeftServo(View view) {
-        close("left");
+        api.sendActions(Arrays.asList(new DeviceAction(DeviceAction.ACTION_CLOSE, "","1"))).enqueue(basicResponse);
     }
 
     public void middleLeftServo(View view) {
-        middle("left");
+        api.sendActions(Arrays.asList(new DeviceAction(DeviceAction.ACTION_MIDDLE, "","1"))).enqueue(basicResponse);
     }
 
-    public void openFullServo(View view){openFull("");}
+    public void openFullServo(View view){
+        api.sendActions(Arrays.asList(new DeviceAction(DeviceAction.ACTION_OPEN_BRIGHT, "","3"))).enqueue(basicResponse);
+    }
 
     public void restartDevice(View view){
         api.restart().enqueue(new Callback<Void>() {
@@ -204,22 +189,21 @@ public class ControlDeviceActivity extends AppCompatActivity {
     }
 
     public void saveButton(View view) {
-        String valueOpen = ((EditText) findViewById(R.id.open_value)).getText().toString();
-        String valueClose = ((EditText) findViewById(R.id.close_value)).getText().toString();
+        String valueOpen = openEdit.getText().toString();
+        String valueClose = closeEdit.getText().toString();
+        String valueBright = brightEdit.getText().toString();
         String deviceName = deviceNameEdit.getText().toString();
-        if (!valueOpen.isEmpty() && !valueClose.isEmpty() && !deviceName.isEmpty()) {
-            saveSettings(valueOpen, valueClose, "-1", "", deviceName, networkNameEdit.getText().toString(), networkPasswordEdit.getText().toString());
+        if (!valueOpen.isEmpty() && !valueClose.isEmpty() && !valueBright.isEmpty()) {
+            api.sendActions(Arrays.asList(
+                    new DeviceAction(DeviceAction.ACTION_SAVE_SETTINGS, DeviceAction.PARAM_BRIGHT, valueBright),
+                    new DeviceAction(DeviceAction.ACTION_SAVE_SETTINGS, DeviceAction.PARAM_OPEN, valueOpen),
+                    new DeviceAction(DeviceAction.ACTION_SAVE_SETTINGS, DeviceAction.PARAM_CLOSE, valueClose),
+                    new DeviceAction(DeviceAction.ACTION_SAVE_SETTINGS, DeviceAction.PARAM_DEVICE_NAME,  deviceName),
+                    new DeviceAction(DeviceAction.ACTION_SAVE_SETTINGS, DeviceAction.PARAM_NETWORK_NAME, networkNameEdit.getText().toString()),
+                    new DeviceAction(DeviceAction.ACTION_SAVE_SETTINGS, DeviceAction.PARAM_NETWORK_PASSWORD, networkPasswordEdit.getText().toString())
+            )).enqueue(basicResponse);
         }else{
-            Toast.makeText(context, "Open/close parameters can't be empty!", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    public void setAngle(View view){
-        String angle = angleEdit.getText().toString();
-        if (!angle.isEmpty()) {
-            saveSettings("", "", angle, "", "", "", "");
-        }else{
-            Toast.makeText(context, "Angle parameter can't be empty!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "Open/close/bright parameters can't be empty!", Toast.LENGTH_SHORT).show();
         }
     }
 }

@@ -1,8 +1,9 @@
-package com.example.mysmartroom;
+package com.example.mysmartroom.objects;
 
 import androidx.annotation.NonNull;
 
 public class DeviceInfo {
+    private String type;
     private String name;
     private int lightValue;
     private int servoLeft;
@@ -10,19 +11,24 @@ public class DeviceInfo {
     private boolean autoTurn;
     private int closeValue;
     private int openValue;
+    private int brightValue;
     private String networkName;
     private String networkPassword;
 
+    public int getBrightValue() {
+        return brightValue;
+    }
+
+    public void setBrightValue(int brightValue) {
+        this.brightValue = brightValue;
+    }
+
     public String getName() {
-        return name.length() > 4 ? name.substring(3) : name;
+        return name;
     }
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public String getType(){
-        return name.substring(0, name.indexOf("}") + 1);
     }
 
     public boolean isAutoTurn() {
@@ -87,6 +93,13 @@ public class DeviceInfo {
 
     public void setNetworkPassword(String networkPassword) {
         this.networkPassword = networkPassword;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+    public String getType(){
+        return type;
     }
 
     @NonNull
